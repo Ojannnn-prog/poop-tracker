@@ -735,6 +735,39 @@
         });
 
         // --- FLASHCARD QUOTES LOGIC ---
+        const funFacts = [
+            { title: "Imun Super! 🌟", text: "Sekitar 70% sel imun tubuh kita berada di usus. Rutin BAB menandakan sistem pencernaanmu lancar!", color: "bg-[#22C55E]" },
+            { title: "Awas Sembelit! 🚨", text: "Menahan BAB bisa membuat kotoran semakin keras. Jangan ditahan ya!", color: "bg-[#FF90E8]" },
+            { title: "Warna Kehidupan 🎨", text: "Warna coklat pada poop berasal dari 'stercobilin', hasil pemecahan sel darah merah.", color: "bg-[#FFC900]" },
+            { title: "Cepat & Kilat ⚡", text: "Mamalia rata-rata butuh waktu sekitar 12 detik untuk buang air besar lho!", color: "bg-[#3B82F6]" }
+        ];
+
+        const flashCardMain = document.getElementById('flashCardMain');
+        const factTitleMain = document.getElementById('factTitleMain');
+        const factTextMain = document.getElementById('factTextMain');
+
+        // Gunakan index untuk track data saat ini agar akurat
+        let currentFunFactIndex = 0;
+
+        flashCardMain.addEventListener('click', () => {
+            flashCardMain.classList.add('scale-95');
+            setTimeout(() => flashCardMain.classList.remove('scale-95'), 150);
+
+            let newIndex;
+            do { newIndex = Math.floor(Math.random() * funFacts.length); }
+            while (newIndex === currentFunFactIndex);
+
+            currentFunFactIndex = newIndex;
+            let newFact = funFacts[newIndex];
+
+            factTitleMain.innerText = newFact.title;
+            factTextMain.innerText = newFact.text;
+
+            // Hapus kelas warna lama, lalu tambahkan warna yang baru dengan aman
+            flashCardMain.className = flashCardMain.className.replace(/bg-\[[^\]]+\]/g, '').trim();
+            flashCardMain.classList.add(newFact.color.match(/bg-\[[^\]]+\]/)[0]);
+        });
+
         const gutQuotes = [
             "Usus yang tenang menghasilkan pikiran yang riang! Jangan lupa makan pepaya hari ini. 💩",
             "Cinta bikin sakit hati, sembelit bikin sakit perut. Banyakin minum air ya! 💧",
@@ -745,15 +778,24 @@
 
         const quoteCard = document.getElementById('quoteCard');
         const quoteText = document.getElementById('quoteText');
+
+        let currentQuoteIndex = -1;
         function setRandomQuote() {
-            let newQuote;
-            do { newQuote = gutQuotes[Math.floor(Math.random() * gutQuotes.length)]; } while (newQuote === quoteText.innerText);
-            quoteText.innerText = newQuote;
+            let newIndex;
+            do { newIndex = Math.floor(Math.random() * gutQuotes.length); }
+            while (newIndex === currentQuoteIndex);
+
+            currentQuoteIndex = newIndex;
+            quoteText.innerText = gutQuotes[newIndex];
         }
+
         quoteCard.addEventListener('click', () => {
-            quoteCard.classList.add('scale-95'); setTimeout(() => quoteCard.classList.remove('scale-95'), 150);
+            quoteCard.classList.add('scale-95');
+            setTimeout(() => quoteCard.classList.remove('scale-95'), 150);
             setRandomQuote();
         });
+
+        setRandomQuote(); // Jalankan pertama kali untuk isi awal
 
 
         // --- JURNAL MEDIS POPULER (FLASHCARD) LOGIC ---
@@ -769,11 +811,14 @@
         const journalText = document.getElementById('journalText');
         const journalSource = document.getElementById('journalSource');
 
+        let currentJournalIndex = -1;
         function setRandomJournal() {
-            let currentTitle = journalTitle.innerText;
-            let newJournal;
-            do { newJournal = medicalJournals[Math.floor(Math.random() * medicalJournals.length)]; }
-            while (newJournal.title.toUpperCase() === currentTitle.toUpperCase() && medicalJournals.length > 1);
+            let newIndex;
+            do { newIndex = Math.floor(Math.random() * medicalJournals.length); }
+            while (newIndex === currentJournalIndex && medicalJournals.length > 1);
+
+            currentJournalIndex = newIndex;
+            let newJournal = medicalJournals[newIndex];
 
             journalTitle.innerText = newJournal.title;
             journalText.innerText = newJournal.text;
@@ -1135,37 +1180,52 @@
             html2pdf().set(opt).from(element).save();
         });
 
+        // --- INIT FIREBASE (CLOUD PRODUCTION) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyAGU_aKWf79QXjIB6YXHrJv5xsFAh1JZt0",
+            authDomain: "dokter-usus-poop.firebaseapp.com",
+            projectId: "dokter-usus-poop",
+            storageBucket: "dokter-usus-poop.firebasestorage.app",
+            messagingSenderId: "865687137196",
+            appId: "1:865687137196:web:8e6e540dcd02f2ba7ee809"
+        };
 
-        // --- INIT FIREBASE (AMAN LOKAL) ---
-        try {
-            if (typeof __firebase_config === 'undefined' || !__firebase_config || __firebase_config === '{}') throw new Error("Lokal");
-            const app = initializeApp(JSON.parse(__firebase_config));
-            const auth = getAuth(app); dbRef = getFirestore(app);
-            appIdStr = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        // Inisialisasi Firebase Sesungguhnya
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        dbRef = getFirestore(app);
+        appIdStr = "dokter-usus-poop-app"; // Menjadi kunci folder database Anda
 
-            const initAuth = async () => {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
-                else await signInAnonymously(auth);
-            };
-            initAuth();
+        // Sistem Login Anonim Otomatis
+        const initAuth = async () => {
+            try {
+                await signInAnonymously(auth);
+            } catch (error) {
+                console.error("Gagal terhubung ke server:", error);
+                alert("Gagal terhubung ke database. Pastikan fitur Authentication (Anonymous) di Firebase Anda sudah berstatus 'Enable'.");
+            }
+        };
+        initAuth();
 
-            onAuthStateChanged(auth, async (currentUser) => {
-                user = currentUser;
-                if (user) {
-                    try {
-                        const docSnap = await getDoc(doc(dbRef, 'artifacts', appIdStr, 'users', user.uid, 'profile', 'data'));
-                        if (docSnap.exists()) {
-                            const data = docSnap.data();
-                            document.getElementById('inputName').value = data.name;
-                            document.querySelector(`input[name="gender"][value="${data.gender}"]`).checked = true;
-                            document.getElementById('formTitle').innerText = `Halo, ${data.name}! 👋`;
-                            document.getElementById('goToCalendarBtn').classList.remove('hidden');
-                            fetchLogs();
-                        }
-                    } catch (error) { }
+        // Pantau User & Ambil Data
+        onAuthStateChanged(auth, async (currentUser) => {
+            user = currentUser;
+            if (user) {
+                try {
+                    const docSnap = await getDoc(doc(dbRef, 'artifacts', appIdStr, 'users', user.uid, 'profile', 'data'));
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        document.getElementById('inputName').value = data.name;
+                        document.querySelector(`input[name="gender"][value="${data.gender}"]`).checked = true;
+                        document.getElementById('formTitle').innerText = `Halo, ${data.name}! 👋`;
+                        document.getElementById('goToCalendarBtn').classList.remove('hidden');
+                        fetchLogs();
+                    }
+                } catch (error) {
+                    console.error("Error mengambil data profil:", error);
                 }
-            });
-        } catch (e) { console.warn("Mode Lokal"); }
+            }
+        });
     </script>
 </body>
 
